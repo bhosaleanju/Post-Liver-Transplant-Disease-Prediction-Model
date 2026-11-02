@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HepatoGuard AI | Post-Liver Transplant Complication Risk Prediction</title>
+  <meta name="description" content="State-of-the-art machine learning prognostic system for post-liver transplant complication prediction and patient risk stratification.">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            clinical: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              900: '#134e4a',
+            },
+            navy: {
+              800: '#111827',
+              850: '#0e1626',
+              900: '#0a0f1d',
+              950: '#060a14',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar and Glow utilities */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0f1d;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .glow-teal {
+      box-shadow: 0 0 25px -5px rgba(20, 184, 166, 0.25);
+    }
+    .glow-rose {
+      box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.35);
+    }
+    .glow-amber {
+      box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.3);
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-input {
+      background: rgba(2, 6, 23, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      transition: all 0.2s ease-in-out;
+    }
+    .glass-input:focus {
+      border-color: #14b8a6;
+      box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
+      outline: none;
+    }
+    @media print {
+      body { background: white !important; color: black !important; }
+      .no-print { display: none !important; }
+      .glass-card { background: white !important; border: 1px solid #ddd !important; box-shadow: none !important; color: black !important; }
+      .text-slate-100, .text-slate-200, .text-slate-300, .text-white { color: #111 !important; }
+      .text-slate-400, .text-slate-500 { color: #555 !important; }
+    }
+  </style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen font-sans selection:bg-clinical-500 selection:text-white antialiased">
+
+  <!-- Background Ambient Glow -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-clinical-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+    
+    <!-- Header & Clinical Branding -->
+    <header class="glass-card rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-2xl">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-xl bg-gradient-to-tr from-clinical-600 via-teal-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-clinical-500/20 text-white flex-shrink-0">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">HepatoGuard <span class="bg-gradient-to-r from-clinical-400 to-cyan-300 bg-clip-text text-transparent">AI</span></h1>
+            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-clinical-500/20 text-clinical-300 border border-clinical-500/30">Clinical Prognostics v2.0</span>
+          </div>
+          <p class="text-sm text-slate-400 mt-1">Multi-Class Post-Liver Transplant Complication Prediction & Risk Stratification</p>
+        </div>
+      </div>
+
+      <!-- Live Model Badges -->
+      <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
+        <div class="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-slate-300">Ensemble AI (RF + GB + XGB)</span>
+        </div>
+        <div class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60">
+          <span class="text-slate-400">ROC AUC:</span> <span class="text-clinical-400 font-bold" id="header-auc">84.1%</span>
+        </div>
+        <div class="px-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/60">
+          <span class="text-slate-400">Features:</span> <span class="text-cyan-400 font-bold" id="header-features">22 Parameters</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Quick Preset Profiles Toolbar (No-Print) -->
+    <div class="no-print glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2 text-sm text-slate-300">
+        <svg class="w-4 h-4 text-clinical-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span class="font-medium text-slate-300">Quick Patient Profiles:</span>
+        <span class="text-xs text-slate-400 hidden lg:inline">(Populate one-click realistic clinical scenarios)</span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button type="button" id="btn-preset-healthy" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Profile A: Low Risk / Stable
+        </button>
+        <button type="button" id="btn-preset-moderate" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 transition-all flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span> Profile B: Moderate Risk / Diabetic
+        </button>
+        <button type="button" id="btn-preset-high" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/30 transition-all flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-400"></span> Profile C: High Risk / Cirrhosis & Ischemia
+        </button>
+        <button type="button" id="btn-reset-form" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700 border border-slate-700 transition-all">
+          Clear All
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- Left Column: Patient Biomarker Input Form (7 cols) -->
+      <section class="lg:col-span-7 space-y-6">
+        <form id="patient-prediction-form" class="space-y-6">
+
+          <!-- Section 1: Demographics & Core Liver Scores -->
+          <div class="glass-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div class="w-8 h-8 rounded-lg bg-teal-500/15 text-teal-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white">1. Recipient Demographics & Severity</h2>
+                <p class="text-xs text-slate-400">Baseline patient metrics and end-stage liver severity index</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Age -->
+              <div>
+                <label for="r_age" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Recipient Age (Years)</label>
+                <input type="number" id="r_age" name="r_age" min="18" max="90" value="52" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Standard range: 18 - 85 years</span>
+              </div>
+
+              <!-- Gender -->
+              <div>
+                <label for="r_gender" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Biological Sex</label>
+                <select id="r_gender" name="r_gender" class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-1 focus:ring-teal-500">
+                  <option value="male" selected>Male (1)</option>
+                  <option value="female">Female (0)</option>
+                </select>
+                <span class="text-[11px] text-slate-500">Recipient anatomical classification</span>
+              </div>
+
+              <!-- BMI -->
+              <div>
+                <label for="r_bmi" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Body Mass Index (BMI)</label>
+                <input type="number" id="r_bmi" name="r_bmi" step="0.1" min="15" max="55" value="26.4" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">kg/m² (Normal: 18.5 - 24.9)</span>
+              </div>
+
+              <!-- MELD Score -->
+              <div>
+                <label for="r_meld_score" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">MELD Score (6 - 40)</label>
+                <input type="number" id="r_meld_score" name="r_meld_score" min="6" max="40" value="18" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Model for End-Stage Liver Disease</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Pre-existing Conditions & Etiology -->
+          <div class="glass-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white">2. Medical History & Comorbidities</h2>
+                <p class="text-xs text-slate-400">Pre-transplant recipient etiology and co-existing clinical conditions</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <!-- Diabetes -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">Diabetes</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">Pre-existing</span>
+                  <input type="checkbox" id="r_diabetes" name="r_diabetes" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+
+              <!-- Hypertension -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">Hypertension</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">Systemic BP</span>
+                  <input type="checkbox" id="r_hypertension" name="r_hypertension" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+
+              <!-- Alcohol Abuse -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">Alcohol Abuse</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">Heavy history</span>
+                  <input type="checkbox" id="r_alcohol_abuse" name="r_alcohol_abuse" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+
+              <!-- Smoking -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">Smoking</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">Tobacco use</span>
+                  <input type="checkbox" id="r_smoking" name="r_smoking" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+
+              <!-- Hepatitis B -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">Hepatitis B</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">HBV Seropositive</span>
+                  <input type="checkbox" id="r_hepatitis_b" name="r_hepatitis_b" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+
+              <!-- Hepatitis C -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">Hepatitis C</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">HCV Seropositive</span>
+                  <input type="checkbox" id="r_hepatitis_c" name="r_hepatitis_c" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+
+              <!-- Alcoholic Cirrhosis -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">Alcoholic Cirrhosis</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">ALD etiology</span>
+                  <input type="checkbox" id="r_alcoholic_cirrhosis" name="r_alcoholic_cirrhosis" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+
+              <!-- Primary Biliary Cirrhosis -->
+              <label class="glass-input rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-all">
+                <span class="text-xs font-semibold text-slate-300">PBC / Cholangitis</span>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-[11px] text-slate-400">Autoimmune</span>
+                  <input type="checkbox" id="r_primary_biliary_cirrhosis" name="r_primary_biliary_cirrhosis" value="1" class="w-4 h-4 text-teal-500 rounded bg-slate-900 border-slate-700 focus:ring-teal-500">
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 3: Laboratory & Clinical Biomarkers -->
+          <div class="glass-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div class="w-8 h-8 rounded-lg bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white">3. Serum Biomarkers & Hematology</h2>
+                <p class="text-xs text-slate-400">Laboratory blood serum markers, electrolytes, and cell counts</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <!-- Albumin -->
+              <div>
+                <label for="r_albumin_level" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Serum Albumin (g/L)</label>
+                <input type="number" id="r_albumin_level" name="r_albumin_level" step="0.1" min="10" max="60" value="38.5" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Normal: 35.0 - 50.0 g/L</span>
+              </div>
+
+              <!-- Sodium (Na) -->
+              <div>
+                <label for="r_na" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Serum Sodium (Na, mEq/L)</label>
+                <input type="number" id="r_na" name="r_na" step="0.5" min="110" max="165" value="139.0" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Normal: 135 - 145 mEq/L</span>
+              </div>
+
+              <!-- Magnesium (Mg) -->
+              <div>
+                <label for="r_mg" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Serum Magnesium (mg/dL)</label>
+                <input type="number" id="r_mg" name="r_mg" step="0.1" min="0.5" max="5.0" value="2.1" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Normal: 1.7 - 2.4 mg/dL</span>
+              </div>
+
+              <!-- WBC -->
+              <div>
+                <label for="r_wbc" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">White Blood Cells (/µL)</label>
+                <input type="number" id="r_wbc" name="r_wbc" min="1000" max="40000" value="6800" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Normal: 4,000 - 11,000 /µL</span>
+              </div>
+
+              <!-- Lymphocytes -->
+              <div>
+                <label for="r_lympochyte" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Lymphocytes (%)</label>
+                <input type="number" id="r_lympochyte" name="r_lympochyte" step="0.5" min="2" max="75" value="29.0" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Normal: 20 - 40 %</span>
+              </div>
+
+              <!-- Platelets -->
+              <div>
+                <label for="r_platelets" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Platelet Count (/µL)</label>
+                <input type="number" id="r_platelets" name="r_platelets" min="10000" max="800000" value="195000" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Normal: 150k - 450k /µL</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Surgical & Post-Operative Dynamics -->
+          <div class="glass-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white">4. Surgical & Ischemic Parameters</h2>
+                <p class="text-xs text-slate-400">Organ preservation ischemia intervals and post-transplant interventions</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Cold Ischemia Time -->
+              <div>
+                <label for="r_cold_ischemia_time" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Cold Ischemia Time (Minutes)</label>
+                <input type="number" id="r_cold_ischemia_time" name="r_cold_ischemia_time" min="60" max="1200" value="340" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Preservation duration (Optimal &lt; 480 min)</span>
+              </div>
+
+              <!-- Warm Ischemia Time -->
+              <div>
+                <label for="r_warm_ischemia_time" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Warm Ischemia Time (Minutes)</label>
+                <input type="number" id="r_warm_ischemia_time" name="r_warm_ischemia_time" min="10" max="150" value="28" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Anastomosis time (Optimal &lt; 35 min)</span>
+              </div>
+
+              <!-- Blood Transfusion -->
+              <div>
+                <label for="r_blood_transfusion" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Intraoperative Transfusion</label>
+                <select id="r_blood_transfusion" name="r_blood_transfusion" class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-1 focus:ring-teal-500">
+                  <option value="0" selected>No Transfusion Required (0)</option>
+                  <option value="1">Blood / PRBC Transfused (1)</option>
+                </select>
+                <span class="text-[11px] text-slate-500">Transfusion during surgical procedure</span>
+              </div>
+
+              <!-- Rejection Episodes -->
+              <div>
+                <label for="r_rejection_episodes" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Prior Rejection Episodes</label>
+                <input type="number" id="r_rejection_episodes" name="r_rejection_episodes" min="0" max="10" value="0" required class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:ring-1 focus:ring-teal-500">
+                <span class="text-[11px] text-slate-500">Recorded graft acute rejection events</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit CTA Button -->
+          <div class="no-print">
+            <button type="submit" id="btn-submit-prediction" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-clinical-600 via-teal-500 to-cyan-500 hover:from-clinical-500 hover:to-cyan-400 text-white font-bold text-base shadow-xl shadow-clinical-500/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-3">
+              <span id="button-spinner" class="hidden">
+                <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </span>
+              <svg id="button-icon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span id="button-text">Generate Clinical Risk Assessment</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Interactive Clinical Results Panel (5 cols) -->
+      <section class="lg:col-span-5 space-y-6">
+
+        <!-- Welcome Placeholder (shown before first prediction) -->
+        <div id="results-placeholder" class="glass-card rounded-2xl p-8 text-center space-y-4 border border-dashed border-slate-700/80">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-clinical-400">
+            <svg class="w-8 h-8 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Ready for Prognostic Evaluation</h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              Configure patient parameters or select a Quick Profile preset, then click <strong class="text-clinical-400">Generate Clinical Risk Assessment</strong> to compute prognostic risk vectors.
+            </p>
+          </div>
+          <div class="pt-2">
+            <button type="button" id="btn-quick-run" class="px-4 py-2 rounded-xl text-xs font-semibold bg-clinical-500/20 text-clinical-300 hover:bg-clinical-500/30 border border-clinical-500/30 transition-all">
+              ⚡ Run Assessment with Profile A
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Results Container (hidden by default) -->
+        <div id="results-container" class="hidden space-y-6">
+          
+          <!-- Primary Outcome & Health Score Card -->
+          <div id="hero-result-card" class="glass-card rounded-2xl p-6 space-y-6 border border-slate-700 relative overflow-hidden transition-all duration-300">
+            <!-- Decorative Accent Gradient Bar -->
+            <div id="hero-gradient-bar" class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-500 to-cyan-500"></div>
+
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <span class="text-xs font-mono uppercase tracking-wider text-slate-400">Primary Prognosis</span>
+                <h3 id="res-primary-outcome" class="text-2xl font-black text-white mt-0.5 tracking-tight">No Complication</h3>
+                <div class="flex items-center gap-2 mt-2">
+                  <span id="res-risk-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Low Risk
+                  </span>
+                  <span class="text-xs text-slate-400 font-mono">Confidence: <span id="res-confidence" class="text-white font-bold">88.5%</span></span>
+                </div>
+              </div>
+
+              <!-- Radial Health Score Gauge -->
+              <div class="flex flex-col items-center justify-center flex-shrink-0">
+                <div class="relative w-24 h-24">
+                  <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="none"></circle>
+                    <circle id="res-gauge-circle" cx="50" cy="50" r="40" stroke="#14b8a6" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="30" stroke-linecap="round" fill="none" class="transition-all duration-1000 ease-out"></circle>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span id="res-health-score" class="text-xl font-black text-white font-mono leading-none">92.4</span>
+                    <span class="text-[9px] uppercase font-bold text-slate-400 mt-0.5">Viability</span>
+                  </div>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 font-mono">Graft Index</span>
+              </div>
+            </div>
+
+            <!-- Action Controls (Export / Print / Re-test) -->
+            <div class="no-print pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
+              <button type="button" id="btn-print-report" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Export Report
+              </button>
+              <button type="button" id="btn-copy-summary" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+                Copy Summary
+              </button>
+            </div>
+          </div>
+
+          <!-- Complication Details & Clinical Protocols -->
+          <div class="glass-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-clinical-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h4 class="text-sm font-bold text-white uppercase tracking-wider">Identified Risk Vectors</h4>
+              </div>
+              <span class="text-xs text-slate-400 font-mono">&gt; 5% Probability</span>
+            </div>
+
+            <!-- List of Complications -->
+            <div id="complications-list" class="space-y-3.5">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- Full Probability Spectrum (All 11 Classes) -->
+          <div class="glass-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h4 class="text-sm font-bold text-white uppercase tracking-wider">Class Probability Spectrum</h4>
+              <span class="text-xs text-slate-400 font-mono">11 Complication Classes</span>
+            </div>
+
+            <div id="all-probabilities-list" class="space-y-2.5">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Clinical Disclaimer Footer -->
+    <footer class="pt-6 border-t border-slate-800/80 text-center text-xs text-slate-500 space-y-2">
+      <p>
+        <strong>Clinical AI Research Notice:</strong> HepatoGuard AI is an investigational decision-support tool powered by machine learning (ROC AUC 84.1%). It does not replace comprehensive medical judgment or official clinical diagnostics.
+      </p>
+      <p class="font-mono text-[11px] text-slate-600">
+        Post-Liver Transplant Complication Prediction Model &copy; 2026. All rights reserved.
+      </p>
+    </footer>
+
+  </div>
+
+  <!-- Client-side Logic -->
+  <script>
+    // Presets definitions
+    const PRESETS = {
+      healthy: {
+        r_age: 42,
+        r_gender: 'male',
+        r_bmi: 23.2,
+        r_meld_score: 11,
+        r_diabetes: 0,
+        r_hypertension: 0,
+        r_alcohol_abuse: 0,
+        r_smoking: 0,
+        r_hepatitis_b: 0,
+        r_hepatitis_c: 0,
+        r_alcoholic_cirrhosis: 0,
+        r_primary_biliary_cirrhosis: 0,
+        r_albumin_level: 44.0,
+        r_na: 141.0,
+        r_mg: 2.2,
+        r_wbc: 5800,
+        r_lympochyte: 34.0,
+        r_platelets: 240000,
+        r_cold_ischemia_time: 280,
+        r_warm_ischemia_time: 24,
+        r_blood_transfusion: 0,
+        r_rejection_episodes: 0
+      },
+      moderate: {
+        r_age: 56,
+        r_gender: 'female',
+        r_bmi: 28.5,
+        r_meld_score: 19,
+        r_diabetes: 1,
+        r_hypertension: 1,
+        r_alcohol_abuse: 0,
+        r_smoking: 1,
+        r_hepatitis_b: 0,
+        r_hepatitis_c: 1,
+        r_alcoholic_cirrhosis: 0,
+        r_primary_biliary_cirrhosis: 0,
+        r_albumin_level: 35.0,
+        r_na: 136.0,
+        r_mg: 1.9,
+        r_wbc: 7900,
+        r_lympochyte: 24.0,
+        r_platelets: 165000,
+        r_cold_ischemia_time: 420,
+        r_warm_ischemia_time: 35,
+        r_blood_transfusion: 1,
+        r_rejection_episodes: 0
+      },
+      high: {
+        r_age: 64,
+        r_gender: 'male',
+        r_bmi: 32.1,
+        r_meld_score: 28,
+        r_diabetes: 1,
+        r_hypertension: 1,
+        r_alcohol_abuse: 1,
+        r_smoking: 1,
+        r_hepatitis_b: 1,
+        r_hepatitis_c: 0,
+        r_alcoholic_cirrhosis: 1,
+        r_primary_biliary_cirrhosis: 0,
+        r_albumin_level: 28.0,
+        r_na: 131.0,
+        r_mg: 1.6,
+        r_wbc: 12400,
+        r_lympochyte: 14.0,
+        r_platelets: 85000,
+        r_cold_ischemia_time: 680,
+        r_warm_ischemia_time: 48,
+        r_blood_transfusion: 1,
+        r_rejection_episodes: 2
+      }
+    };
+
+    // Apply preset to form
+    function applyPreset(data) {
+      for (const [key, val] of Object.entries(data)) {
+        const el = document.getElementById(key);
+        if (!el) continue;
+        if (el.type === 'checkbox') {
+          el.checked = Boolean(val);
+        } else {
+          el.value = val;
+        }
+      }
+    }
+
+    // Reset Form
+    function resetForm() {
+      document.getElementById('patient-prediction-form').reset();
+      applyPreset(PRESETS.healthy);
+    }
+
+    // Initialize Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load model info asynchronously
+      fetch('/api/model-info')
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            document.getElementById('header-auc').textContent = data.roc_auc + '%';
+            document.getElementById('header-features').textContent = data.features_count + ' Biomarkers';
+          }
+        })
+        .catch(err => console.log('Model info fetch error:', err));
+
+      // Preset button clicks
+      document.getElementById('btn-preset-healthy').addEventListener('click', () => applyPreset(PRESETS.healthy));
+      document.getElementById('btn-preset-moderate').addEventListener('click', () => applyPreset(PRESETS.moderate));
+      document.getElementById('btn-preset-high').addEventListener('click', () => applyPreset(PRESETS.high));
+      document.getElementById('btn-reset-form').addEventListener('click', resetForm);
+      document.getElementById('btn-quick-run').addEventListener('click', () => {
+        applyPreset(PRESETS.healthy);
+        submitPrediction();
+      });
+
+      // Submit Form
+      document.getElementById('patient-prediction-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitPrediction();
+      });
+
+      // Export / Print
+      document.getElementById('btn-print-report').addEventListener('click', () => {
+        window.print();
+      });
+
+      // Copy Summary
+      document.getElementById('btn-copy-summary').addEventListener('click', () => {
+        const primaryOutcome = document.getElementById('res-primary-outcome').innerText;
+        const riskLevel = document.getElementById('res-risk-badge').innerText;
+        const healthScore = document.getElementById('res-health-score').innerText;
+        const confidence = document.getElementById('res-confidence').innerText;
+        const text = `HepatoGuard AI Clinical Assessment:\nPrimary Outcome: ${primaryOutcome}\nRisk Level: ${riskLevel}\nConfidence: ${confidence}\nGraft Viability Score: ${healthScore}/100`;
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Assessment summary copied to clipboard!');
+        });
+      });
+    });
+
+    // Submit Prediction Handler
+    async function submitPrediction() {
+      const form = document.getElementById('patient-prediction-form');
+      const formData = new FormData(form);
+      const payload = {};
+
+      formData.forEach((value, key) => {
+        payload[key] = value;
+      });
+
+      // Explicitly check boolean checkboxes if unchecked
+      const checkboxes = [
+        'r_diabetes', 'r_hypertension', 'r_alcohol_abuse', 'r_smoking',
+        'r_hepatitis_b', 'r_hepatitis_c', 'r_alcoholic_cirrhosis', 'r_primary_biliary_cirrhosis'
+      ];
+      checkboxes.forEach(cb => {
+        const el = document.getElementById(cb);
+        payload[cb] = el && el.checked ? 1 : 0;
+      });
+
+      // UI Loading state
+      const btn = document.getElementById('btn-submit-prediction');
+      const spinner = document.getElementById('button-spinner');
+      const btnIcon = document.getElementById('button-icon');
+      const btnText = document.getElementById('button-text');
+
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      btnIcon.classList.add('hidden');
+      btnText.textContent = 'Analyzing Clinical Biomarkers...';
+
+      try {
+        const response = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          renderResults(result);
+        } else {
+          alert('Prediction error: ' + (result.message || 'Unknown server error'));
+        }
+      } catch (err) {
+        console.error('API Error:', err);
+        alert('Communication failed with clinical prediction server: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btnIcon.classList.remove('hidden');
+        btnText.textContent = 'Generate Clinical Risk Assessment';
+      }
+    }
+
+    // Render Results in UI
+    function renderResults(data) {
+      document.getElementById('results-placeholder').classList.add('hidden');
+      const container = document.getElementById('results-container');
+      container.classList.remove('hidden');
+
+      // Primary outcome
+      document.getElementById('res-primary-outcome').textContent = data.predicted_complication;
+      document.getElementById('res-confidence').textContent = data.top_probability + '%';
+
+      // Risk badge & colors
+      const riskBadge = document.getElementById('res-risk-badge');
+      const heroBar = document.getElementById('hero-gradient-bar');
+      const circle = document.getElementById('res-gauge-circle');
+      const healthScoreEl = document.getElementById('res-health-score');
+
+      riskBadge.textContent = data.risk_level;
+      healthScoreEl.textContent = data.health_score;
+
+      // Animate circular gauge: circumference = 2 * PI * 40 ~= 251.2
+      const circumference = 251.2;
+      const offset = circumference - (data.health_score / 100) * circumference;
+      circle.style.strokeDashoffset = offset;
+
+      if (data.risk_level === 'High Risk') {
+        riskBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        heroBar.className = 'absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500';
+        circle.setAttribute('stroke', '#f43f5e');
+      } else if (data.risk_level === 'Moderate Risk') {
+        riskBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        heroBar.className = 'absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-yellow-500';
+        circle.setAttribute('stroke', '#f59e0b');
+      } else {
+        riskBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        heroBar.className = 'absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-500 to-cyan-500';
+        circle.setAttribute('stroke', '#14b8a6');
+      }
+
+      // Populate complications cards
+      const compList = document.getElementById('complications-list');
+      compList.innerHTML = '';
+
+      if (data.complications && data.complications.length > 0) {
+        data.complications.forEach(comp => {
+          const card = document.createElement('div');
+          card.className = 'p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2.5 transition-all hover:border-slate-700';
+
+          const badgeColorMap = {
+            rose: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+            red: 'bg-red-500/20 text-red-300 border-red-500/30',
+            amber: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+            yellow: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+            orange: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+            emerald: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+            purple: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+            violet: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+            blue: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+            cyan: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+            slate: 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+          };
+          const badgeClass = badgeColorMap[comp.badge] || badgeColorMap['slate'];
+
+          let factorsHtml = '';
+          if (comp.contributing_factors && comp.contributing_factors.length > 0) {
+            factorsHtml = `
+              <div class="flex items-center gap-1.5 flex-wrap pt-1 text-[11px]">
+                <span class="text-slate-400">Key Markers:</span>
+                ${comp.contributing_factors.map(f => `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono border border-slate-700">${f.replace('R_', '')}</span>`).join('')}
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm">${comp.name}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${badgeClass}">${comp.severity}</span>
+              </div>
+              <span class="font-mono text-xs font-bold text-teal-400">${comp.probability_percent}%</span>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-gradient-to-r from-teal-500 to-cyan-400 h-full rounded-full transition-all duration-700" style="width: ${Math.min(100, comp.probability_percent)}%"></div>
+            </div>
+
+            <!-- Clinical Protocol Guidance -->
+            <p class="text-xs text-slate-300 leading-relaxed bg-slate-950/40 p-2.5 rounded-lg border border-slate-800/80">
+              <strong class="text-teal-400">Protocol:</strong> ${comp.recommendation}
+            </p>
+
+            ${factorsHtml}
+          `;
+          compList.appendChild(card);
+        });
+      }
+
+      // Populate All Probabilities List (All 11 classes)
+      const allList = document.getElementById('all-probabilities-list');
+      allList.innerHTML = '';
+
+      if (data.all_predictions && data.all_predictions.length > 0) {
+        data.all_predictions.forEach(p => {
+          const row = document.createElement('div');
+          row.className = 'space-y-1';
+          row.innerHTML = `
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-300 truncate">${p.name}</span>
+              <span class="font-mono text-slate-400 font-medium">${p.probability_percent}%</span>
+            </div>
+            <div class="w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-slate-500/60 h-full rounded-full transition-all duration-500" style="width: ${p.probability_percent}%"></div>
+            </div>
+          `;
+          allList.appendChild(row);
+        });
+      }
+
+      // Smooth scroll on mobile to results
+      if (window.innerWidth < 1024) {
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  </script>
+</body>
+</html>
